@@ -1,4 +1,6 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstproject/Pages/OtpPage.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +16,11 @@ class registerPage extends StatefulWidget {
 
 class _registerPageState extends State<registerPage> {
   var _formkey = GlobalKey<FormState>();
+  final TextEditingController _UserNameController = TextEditingController();
+  final TextEditingController _EmailController = TextEditingController();
+  final TextEditingController _PhoneNoController = TextEditingController();
+  final TextEditingController _passController = TextEditingController();
+  CollectionReference Users = FirebaseFirestore.instance.collection('Users');
 
 
   @override
@@ -99,6 +106,7 @@ class _registerPageState extends State<registerPage> {
                     height: 50,
                     width: 350,
                     child: TextFormField(
+                      controller: _UserNameController,
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Enter your full Name';
@@ -119,7 +127,15 @@ class _registerPageState extends State<registerPage> {
                     height: 50,
                     width: 350,
                     child: TextFormField(
+                      keyboardType: TextInputType.emailAddress,
+                      controller: _EmailController,
                       validator: (value) {
+                        bool emailValid = RegExp(
+                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                            .hasMatch(value!);
+                        if (emailValid != true) {
+                          return 'Email Format not matched';
+                        }
                         if (value!.isEmpty) {
                           return 'Email cannot be left empty.';
                         }
@@ -136,6 +152,7 @@ class _registerPageState extends State<registerPage> {
                     height: 50,
                     width: 350,
                     child: TextFormField(
+                      controller: _PhoneNoController,
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value!.isEmpty) {
@@ -154,6 +171,7 @@ class _registerPageState extends State<registerPage> {
                     height: 50,
                     width: 350,
                     child: TextFormField(
+                      controller: _passController,
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'password cannot be left empty';
@@ -172,12 +190,41 @@ class _registerPageState extends State<registerPage> {
                   ),
 
                   GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OtpPage(),
-                      ),
-                    ),
+                    onTap: () {
+                      if (_formkey.currentState!.validate()){
+                        _formkey.currentState!.save();
+                        FirebaseAuth.instance
+                            .createUserWithEmailAndPassword(
+                            email: _EmailController.text.trim(),
+                            password: _passController.text.trim())
+                            .then((value) {
+                          Users.doc(value.user?.uid).set({
+                            'UserName': _UserNameController.text.trim(),
+                            'Email': _EmailController.text.trim(),
+                            'PhoneNo': _PhoneNoController.text.trim()
+                          }).then((value) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                  const OtpPage()),
+                            );
+                          }).onError((error, stackTrace) async {
+                            showDialog<String>(
+                                context: context,
+                                builder: (BuildContext context) => AlertDialog(
+                                  title: const Text('Error'),
+                                  content:Text(error.toString()),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, 'OK'),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                )
+                            );
+                          });
+                        });}},
                     child: Container(
                       height: 50,
                       width: 350,

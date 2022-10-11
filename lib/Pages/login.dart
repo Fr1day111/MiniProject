@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstproject/Pages/OtpPage.dart';
 import 'package:firstproject/Pages/passwordPage.dart';
 import 'package:firstproject/Pages/registerPage.dart';
+import 'package:firstproject/main.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'googlePage.dart';
 
@@ -15,6 +18,68 @@ class loginPage extends StatefulWidget {
 class _loginPageState extends State<loginPage> {
   var _formkey = GlobalKey<FormState>();
   bool _isPasswordHidden = true;
+  final TextEditingController _mController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  Future signIn() async {
+    await FirebaseAuth.instance
+        .signInWithEmailAndPassword(
+        email: _mController.text.trim(),
+        password: _passwordController.text.trim())
+        .then((value) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyHomePage()),
+      );
+    })
+        .onError((error, stackTrace) async {
+      showDialog<String>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('Error'),
+            content:Text(error.toString()),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'OK'),
+                child: const Text('OK'),
+              ),
+            ],
+          )
+      );
+    });
+  }
+
+  signInWithGoogle() async{
+    final GoogleSignInAccount? googleUser = await GoogleSignIn(
+      scopes: <String>['email']).signIn();
+
+    final GoogleSignInAuthentication googleAuth = await googleUser!.authentication;
+
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken
+    );
+    return await FirebaseAuth.instance.signInWithCredential(credential).then((value) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyHomePage()),
+      );
+    })
+        .onError((error, stackTrace) async {
+      showDialog<String>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('Error'),
+            content:Text(error.toString()),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'OK'),
+                child: const Text('OK'),
+              ),
+            ],
+          )
+      );
+    });;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +102,9 @@ class _loginPageState extends State<loginPage> {
                     height: 50,
                     width: 350,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => googlePage(),
-                        ),
-                      ),
+                      onPressed: () {
+                        signInWithGoogle();
+                      },
                       style: ElevatedButton.styleFrom(
                         primary: Colors.white,
                         shape: new RoundedRectangleBorder(
@@ -110,6 +172,7 @@ class _loginPageState extends State<loginPage> {
 
 
                     child: TextFormField(
+                      controller: _mController,
                       validator: (value) {
 
                         if (value!.isEmpty) {
@@ -129,6 +192,7 @@ class _loginPageState extends State<loginPage> {
                     height: 50,
                     width: 350,
                     child: TextFormField(
+                      controller: _passwordController,
                       obscureText: _isPasswordHidden,
                       validator: (value) {
                         if (value!.isEmpty) {
@@ -177,12 +241,9 @@ class _loginPageState extends State<loginPage> {
                     height: 15,
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OtpPage(),
-                      ),
-                    ),
+                    onTap: () {
+                      signIn();
+                    },
                     child: Container(
                       height: 50,
                       width: 350,
